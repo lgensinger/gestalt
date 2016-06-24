@@ -73,6 +73,13 @@ app.config(function($stateProvider, $urlRouterProvider, $compileProvider) {
         controller: "loginCtrl"
     })
     
+    // ideas
+    .state("ideas", {
+        url: "/ideas/:table",
+        controller: "ideaCtrl",
+        templateUrl: "templates/ideas.html"
+    })
+    
     // main
     .state("app", {
         url: "/{workspace}",
