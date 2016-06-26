@@ -11,7 +11,7 @@ urls = (
     "/api/workspace/", workspace.app_workspaces,
     "/api/data/stories/", story.app_story,
     "/api/persona/", persona.app_persona,
-    "/api/data/", visualization.app_viz,
+    "/api/data/visualization/", visualization.app_viz,
 
     # front-end routes to load angular app
     "/", "index",

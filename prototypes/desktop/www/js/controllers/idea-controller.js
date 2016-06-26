@@ -8,10 +8,10 @@ angular.module("idea-controller", [])
 	$scope.content;
     
     // get CONTENT data stored in service
-	contentService.getData("viz/" + dataset + "/").then(function(data) {
+	contentService.getData("visualization/" + dataset + "/").then(function(data) {
 		
 		// set scope
-		$scope.content = data;console.log(data);
+		$scope.content = data[0];console.log(data);
 		
 	});
     

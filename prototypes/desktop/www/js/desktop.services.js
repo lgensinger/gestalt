@@ -3,5 +3,6 @@ angular.module("desktop.services", [
 	"authentication-service",
 	"base64-service",
 	"content-service",
-    "plotly-service"
+    "plotly-service",
+	"d3-service"
 ]);

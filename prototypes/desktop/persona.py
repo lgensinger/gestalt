@@ -1,5 +1,6 @@
 import web
 import json
+import os
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
@@ -10,8 +11,15 @@ urls = (
     
 )
 
-connection_string = ""
-        
+if os.environ["DATABASE_URL"] is not "":
+	
+	# parse stored connection string
+	values = os.environ["DATABASE_URL"].split(",")
+	
+	connection_string = "dbname='" + values[0] + "' user='" + values[1] + "' host='" + values[2] + "' password='" + values[3] + "'"
+else:
+	connection_string = ""
+
 class persona:
     def GET(self):
         
