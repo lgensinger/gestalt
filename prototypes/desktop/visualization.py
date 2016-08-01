@@ -73,4 +73,4 @@ class geojson:
         
         return json.dumps(data)
     
-app_viz = web.application(urls, locals())
+app = web.application(urls, locals())
