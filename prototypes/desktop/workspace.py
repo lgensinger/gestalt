@@ -94,43 +94,40 @@ class persona_workspaces:
         self.cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         # execute query
         self.cursor.execute("""
-		select w.id,
+		-- panel array
+		with panel_array as (
+		select wp.workspace_id,
+		wp.panel_id,
+		array_agg(row_to_json((select r from (select wp.panel_id, wp.workspace_id, wp.is_default, pl.name, pl.url_name, w.persona_id, vd.name as visualization) r))) as panels
+		from gestalt_workspace_panel wp
+		left join gestalt_panel pl on pl.id = wp.panel_id
+		left join gestalt_workspace w on w.id = wp.workspace_id
+		left join gestalt_persona_panel_story pps on pps.panel_id = wp.panel_id and pps.persona_id = """ + persona_id + """
+		left join gestalt_story s on s.id = pps.story_id
+		left join gestalt_vis v on v.id = s.vis_id
+		left join gestalt_vis_directive vd on vd.id = v.vis_directive_id
+		group by wp.workspace_id,
+		wp.panel_id
+		)
+		-- main query
+		select distinct on (w.id) w.id,
 		w.persona_id,
 		w.url_name,
 		w.is_default,
 		wn.name,
 		p.url_name as default_panel,
-		vd.name as default_vis,
-		array_agg(row_to_json(pl)) as panels
-		from """ + helper.table_prefix + """workspace w
-		left join """ + helper.table_prefix + """workspace_name wn on wn.id = w.workspace_name_id
-		left join """ + helper.table_prefix + """workspace_panel wp on wp.workspace_id = w.id
-		left join """ + helper.table_prefix + """panel p on p.id = wp.panel_id
-		left join """ + helper.table_prefix + """persona_panel_story pps on pps.panel_id = wp.panel_id and pps.persona_id = """ + persona_id + """
-		left join """ + helper.table_prefix + """story s on s.id = pps.story_id
-		left join """ + helper.table_prefix + """vis v on v.id = s.vis_id
-		left join """ + helper.table_prefix + """vis_directive vd on vd.id = v.vis_directive_id
-		left join (
-		select wp.panel_id, wp.workspace_id, wp.is_default, pl.name, pl.url_name, w.persona_id, vd.name as visualization
-		from """ + helper.table_prefix + """workspace_panel wp
-		left join """ + helper.table_prefix + """persona_panel_story pps on pps.panel_id = wp.panel_id and pps.persona_id = """ + persona_id + """
-		left join """ + helper.table_prefix + """story s on s.id = pps.story_id
-		left join """ + helper.table_prefix + """vis v on v.id = s.vis_id
-		left join """ + helper.table_prefix + """vis_directive vd on vd.id = v.vis_directive_id
-		left join """ + helper.table_prefix + """panel pl
-		on pl.id = wp.panel_id
-		left join """ + helper.table_prefix + """workspace w
-		on w.id = wp.workspace_id
-		) pl on pl.workspace_id = w.id
-		where w.persona_id = """ + persona_id + """ and wp.is_default = true
-		group by w.id,
-		w.persona_id,
-		w.url_name,
-		w.url_name,
-		wn.name,
-		p.url_name,
-		vd.name
-		order by wn.name asc;
+		vd.name as default_vis--,
+		--pa.panels
+		from gestalt_workspace w
+		left join gestalt_workspace_name wn on wn.id = w.workspace_name_id
+		left join gestalt_workspace_panel wp on wp.workspace_id = w.id
+		left join gestalt_panel p on p.id = wp.panel_id
+		left join gestalt_persona_panel_story pps on pps.panel_id = wp.panel_id and pps.persona_id = """ + persona_id + """
+		left join gestalt_story s on s.id = pps.story_id
+		left join gestalt_vis v on v.id = s.vis_id
+		left join gestalt_vis_directive vd on vd.id = v.vis_directive_id
+		--left join panel_array pa on pa.workspace_id = w.id
+		where w.persona_id = """ + persona_id + """
         """)
 
         # obtain the data
@@ -178,7 +175,15 @@ class workspace_panels:
 		left join """ + helper.table_prefix + """vis_directive vd on vd.id = v.vis_directive_id
 		left join """ + helper.table_prefix + """panel p on p.id = wp.panel_id
 		left join """ + helper.table_prefix + """workspace w on w.id = wp.workspace_id
-		where w.url_name = '""" + workspace_url_name + """' and pps.persona_id = """ + persona_id + """;
+		where w.url_name = '""" + workspace_url_name + """' and pps.persona_id = """ + persona_id + """
+		group by p.url_name,
+		pps.panel_id,
+		w.url_name,
+		p.name,
+		pps.persona_id,
+		vd.name,
+		p.id
+		order by p.id asc;
         """)
         # obtain the data
         data = self.cursor.fetchall()

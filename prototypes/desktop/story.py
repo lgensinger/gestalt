@@ -147,7 +147,9 @@ class persona_panel_stories:
 		where pps.persona_id = """ + persona_id + """ and pps.panel_id = """ + panel_id + """
 		group by pps.id,
 		s.name,
-		s.url_name;
+		s.url_name,
+		s.id
+		order by s.id asc;
         """)
         # obtain the data
         data = self.cursor.fetchall()
