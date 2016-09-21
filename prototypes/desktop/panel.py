@@ -10,8 +10,8 @@ urls = (
     
     # 0.0.0.0:8000/api/panel/
     "", "all_panels",
-    # 0.0.0.0:8000/api/panel/#/, where # == panel.id
-    "(\d+)/", "single_panel",
+    # 0.0.0.0:8000/api/panel/#/, where # == panel.url_name
+    "(.*)/", "single_panel",
     # 0.0.0.0:8000/api/panel/persona/#/, where # == persona.id
     "persona/(\d+)/", "persona_panels",
     
@@ -41,22 +41,25 @@ class all_panels:
 class single_panel:
     """ Extract a panel with a specific id.
     input:
-        * panel.id
+        * panel.url_name
     output:
         * panel.id
         * panel.name
         * panel.url_name
     """
-    def GET(self, panel_id, connection_string=helper.get_connection_string(os.environ['DATABASE_URL'])):
+    def GET(self, panel_url_name, connection_string=helper.get_connection_string(os.environ['DATABASE_URL'])):
         # connect to postgresql based on configuration in connection_string
         connection = psycopg2.connect(connection_string)
         # get a cursor to perform queries
         self.cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)    
         # execute query
         self.cursor.execute("""
-            SELECT * 
-            FROM gestalt_panel AS panel
-            WHERE panel.id = """ + panel_id + """;
+            SELECT pl.*,
+            vd.name as directive
+            FROM gestalt_panel pl
+            left join gestalt_vis v on v.id = pl.vis_id
+            left join gestalt_vis_directive vd on vd.id = v.vis_directive_id
+            WHERE pl.url_name = '""" + panel_url_name + """';
         """)
         # obtain the data
         data = self.cursor.fetchall()

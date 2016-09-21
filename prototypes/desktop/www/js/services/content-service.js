@@ -2,8 +2,6 @@ angular.module("content-service", [])
 
 .factory("contentService", ["$http", "$q", function($http, $q) {
 	
-	var urlBase = api_config.content_service_uri;
-	
 	return {
 		
 		// data storage
@@ -11,6 +9,8 @@ angular.module("content-service", [])
 		
 		// single http request stored in a promise
 		makeRequest: function(url) {
+            
+            var urlBase = url.match(/api\/panel\/.+\//) ? "" : api_config.content_service_uri;
 			
 			// create deferred object
 			var deferred = $q.defer();

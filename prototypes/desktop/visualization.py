@@ -18,7 +18,7 @@ urls = (
     "heuristics/hierarchy/", "heuristic_hierarchy",
 	"angular/directives/(\d+)/", "ng_directives",
 	"countries/groups/", "node_groups",
-	"geojson/(.*)/", "geojson",
+	"geography/(.*)/", "geography",
     "(.*)/", "nodes"
     
 )
@@ -133,8 +133,8 @@ class node_groups:
         # convert data to a string
         return json.dumps(data)
 	
-class geojson:
-    def GET(self, grid, connection_string=helper.get_connection_string(os.environ['DATABASE_URL'])):
+class geography:
+    def GET(self, canvas_type, connection_string=helper.get_connection_string(os.environ['DATABASE_URL'])):
         # connect to postgresql based on configuration in connection_string
         connection = psycopg2.connect(connection_string)
         # get a cursor to perform queries

@@ -1,11 +1,12 @@
 angular.module("viz-controller", [])
 
 .controller("vizCtrl", ["$scope", "contentService", "$state", "$rootScope", function($scope, contentService, $state, $rootScope) {
-    	        
+        	        
 	// data objects
 	$scope.nodes;
 	$scope.nodeGroups;
 	$scope.heuristics;
+    $scope.geojson;
     
     // country nodes
 	contentService.getData("visualization/cdis/").then(function(data) {
