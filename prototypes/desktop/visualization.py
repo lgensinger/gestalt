@@ -9,6 +9,7 @@ import helper
 urls = (
     
     # rest API backend endpoints
+    "geography/(.*)/(.*)/", "geography",
     "flows/unique_targets/(\d+)/", "flows",
     "story/metric/(\d+)/", "metrics",
     "heuristics/comparison/", "heuristic_comparison",
@@ -18,7 +19,6 @@ urls = (
     "heuristics/hierarchy/", "heuristic_hierarchy",
 	"angular/directives/(\d+)/", "ng_directives",
 	"countries/groups/", "node_groups",
-	"geography/(.*)/", "geography",
     "(.*)/", "nodes"
     
 )
@@ -134,45 +134,65 @@ class node_groups:
         return json.dumps(data)
 	
 class geography:
-    def GET(self, canvas_type, connection_string=helper.get_connection_string(os.environ['DATABASE_URL'])):
+    def GET(self, data_type, polygon_type, connection_string=helper.get_connection_string(os.environ['DATABASE_URL'])):
         # connect to postgresql based on configuration in connection_string
         connection = psycopg2.connect(connection_string)
         # get a cursor to perform queries
         self.cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        # execute query
-        self.cursor.execute("""
-        select 'FeatureCollection' as type,
-        array_agg(row_to_json(r)) as features 
-        from (
-        with t as (
-        select 'Feature'::text
-        ) 
-        select t.text as type,
-        row_to_json(f) as properties,
-        row_to_json(c) as geometry 
-        from t,
-		""" + helper.table_prefix + """geography geo 
-        left join (
-		select geo.id,
-        gn.name,
-        cy.iso2code as iso
-        from """ + helper.table_prefix + """geography geo
-        left join """ + helper.table_prefix + """geography_name gn on gn.id = geo.name_id
-        left join """ + helper.table_prefix + """country cy on cy.id = geo.name_id
-		) f on f.id = geo.id 
-		left join (
-		with t as (
-		select 'Polygon'::text
-		) 
-		select t.text as type,
-        geo.hexagon_polygon as coordinates 
-        from t,
-        """ + helper.table_prefix + """geography geo
-        ) c on c.coordinates = geo.hexagon_polygon 
-        where geo.hexagon_polygon is not null 
-        ) r 
-        group by type;
-        """)
+        
+        # check param
+        if (data_type == "xy"):
+            
+            # execute query to return svg simple x/y coordinate system
+            self.cursor.execute("""
+            select geo.id,
+            gn.name,
+            cty.iso2code as iso,
+            geo.hexagon_center_x as center_x,
+            geo.hexagon_center_y as center_y
+            from """ + helper.table_prefix + """geography geo
+            left join """ + helper.table_prefix + """geography_name gn on gn.id = geo.name_id
+            left join """ + helper.table_prefix + """country cty on cty.id = geo.name_id
+            where geo.hexagon_center_x is not null and geo.hexagon_center_y is not null;
+            """)
+            
+        else:
+
+            # execute query to return mercator projection in geojson coordinate system
+            self.cursor.execute("""
+            select 'FeatureCollection' as type,
+            array_agg(row_to_json(r)) as features 
+            from (
+            with t as (
+            select 'Feature'::text
+            ) 
+            select t.text as type,
+            row_to_json(f) as properties,
+            row_to_json(c) as geometry 
+            from t,
+            """ + helper.table_prefix + """geography geo 
+            left join (
+            select geo.id,
+            gn.name,
+            cy.iso2code as iso
+            from """ + helper.table_prefix + """geography geo
+            left join """ + helper.table_prefix + """geography_name gn on gn.id = geo.name_id
+            left join """ + helper.table_prefix + """country cy on cy.id = geo.name_id
+            ) f on f.id = geo.id 
+            left join (
+            with t as (
+            select 'Polygon'::text
+            ) 
+            select t.text as type,
+            geo.""" + polygon_type + """_polygon as coordinates 
+            from t,
+            """ + helper.table_prefix + """geography geo
+            ) c on c.coordinates = geo.""" + polygon_type + """_polygon 
+            where geo.""" + polygon_type + """_polygon is not null 
+            ) r 
+            group by type;
+            """)
+            
         # obtain the data
         data = self.cursor.fetchall()
         # convert data to a string
@@ -450,22 +470,22 @@ class heuristic_relatedness:
         with node_array as (
         select dd.vis_id,
         array_agg(row_to_json((select r from (select ddl.name) r))) as nodes
-        from gestalt_vis_dummy_data dd
-        left join gestalt_vis_dummy_data_label ddl on ddl.id = dd.name_id
+        from """ + helper.table_prefix + """vis_dummy_data dd
+        left join """ + helper.table_prefix + """vis_dummy_data_label ddl on ddl.id = dd.name_id
         group by dd.vis_id
         ),
         -- links
         link_array as (
         select ddv.data_id,
         array_agg(row_to_json((select r from (select ddl.name) r))) as links
-        from gestalt_vis_dummy_data_values ddv
-        left join gestalt_vis_dummy_data_label ddl on ddl.id = ddv.value
+        from """ + helper.table_prefix + """vis_dummy_data_values ddv
+        left join """ + helper.table_prefix + """vis_dummy_data_label ddl on ddl.id = ddv.value
         group by ddv.data_id
         )
         select dd.vis_id,
         array_agg(row_to_json((select r from (select ddl.name, na.nodes, la.links) r))) as data
-        from gestalt_vis_dummy_data dd
-        left join gestalt_vis_dummy_data_label ddl on ddl.id = dd.name_id
+        from """ + helper.table_prefix + """vis_dummy_data dd
+        left join """ + helper.table_prefix + """vis_dummy_data_label ddl on ddl.id = dd.name_id
         left join node_array na on na.vis_id = dd.id
         left join link_array la on la.data_id = dd.id
         group by dd.vis_id
@@ -475,9 +495,9 @@ class heuristic_relatedness:
         vt.url_name as vis_type_urlname,
         vd.name as directive,
         dd.data
-        from gestalt_vis v
-        left join gestalt_vis_directive vd on vd.id = v.vis_directive_id
-        left join gestalt_vis_type vt on vt.id = v.vis_type_id
+        from """ + helper.table_prefix + """vis v
+        left join """ + helper.table_prefix + """vis_directive vd on vd.id = v.vis_directive_id
+        left join """ + helper.table_prefix + """vis_type vt on vt.id = v.vis_type_id
         left join data_array dd on dd.vis_id = v.id
         where vt.url_name = 'relatedness';
         """)
